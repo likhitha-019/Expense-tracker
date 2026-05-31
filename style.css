@@ -41,6 +41,7 @@ body {
   display: flex;
   min-height: 100vh;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ── Scrollbar ── */
@@ -61,6 +62,8 @@ body {
   height: 100vh;
   z-index: 100;
   transition: transform var(--transition);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .sidebar-brand {
@@ -138,6 +141,8 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ── Topbar ── */
@@ -193,7 +198,7 @@ body {
 }
 
 /* ── Sections ── */
-.section { display: none; padding: 2rem; animation: fadeIn .3s ease; }
+.section { display: none; padding: 2rem; animation: fadeIn .3s ease; overflow-x: hidden; }
 .section.active { display: block; }
 
 @keyframes fadeIn {
@@ -690,8 +695,7 @@ body {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.65);
-  backdrop-filter: blur(4px);
+  background: rgba(0,0,0,.6);
   z-index: 200;
   display: none;
   align-items: center;
