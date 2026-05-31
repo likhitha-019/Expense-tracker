@@ -1114,8 +1114,7 @@ body.dark-theme .btn-export { background: #252d3d; }
     width: 240px;
   }
   .sidebar.open { transform: translateX(0); }
-  /* Dim overlay when sidebar open on mobile */
-  .sidebar-overlay { display: block !important; }
+  /* overlay visibility is controlled by JS only, not CSS */
   .main-content { margin-left: 0; }
   .hamburger { display: block; }
   .section { padding: 1rem; }
