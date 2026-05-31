@@ -28,17 +28,33 @@ const CATEGORY_COLORS = {
 // ── Default People (always seeded on first launch) ────────────────────────
 const DEFAULT_PEOPLE = [];
 
-// ── Version reset (bump this string to force a fresh start) ─────────────────
+// ── Auth helpers ─────────────────────────────────────────────────────────────
 const APP_VERSION = 'v5';
-if (localStorage.getItem('ss_version') !== APP_VERSION) {
-  localStorage.removeItem('ss_expenses');
-  localStorage.removeItem('ss_people');
-  localStorage.setItem('ss_version', APP_VERSION);
+
+function hashStr(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) { h = ((h << 5) + h) + str.charCodeAt(i); h |= 0; }
+  return h.toString(16);
+}
+function getUsers() { return JSON.parse(localStorage.getItem('ss_users') || '{}'); }
+function saveUsers(u) { localStorage.setItem('ss_users', JSON.stringify(u)); }
+
+let currentUser = localStorage.getItem('ss_session') || null;
+function getKey(type) { return `ss_${type}_${currentUser}`; }
+
+function loadUserData() {
+  if (localStorage.getItem(getKey('version')) !== APP_VERSION) {
+    localStorage.removeItem(getKey('expenses'));
+    localStorage.removeItem(getKey('people'));
+    localStorage.setItem(getKey('version'), APP_VERSION);
+  }
+  expenses = JSON.parse(localStorage.getItem(getKey('expenses')) || '[]');
+  people   = JSON.parse(localStorage.getItem(getKey('people'))   || '[]');
 }
 
 // ── State ───────────────────────────────────────────────────────────────────
-let expenses = JSON.parse(localStorage.getItem('ss_expenses') || '[]');
-let people   = JSON.parse(localStorage.getItem('ss_people')   || '[]');
+let expenses = [];
+let people   = [];
 let deleteTargetId = null;
 let selectedAvatarColor = AVATAR_COLORS[0];
 
@@ -57,8 +73,8 @@ const uid  = () => Date.now().toString(36) + Math.random().toString(36).slice(2)
 const today = () => new Date().toISOString().slice(0, 10);
 
 function saveData() {
-  localStorage.setItem('ss_expenses', JSON.stringify(expenses));
-  localStorage.setItem('ss_people',   JSON.stringify(people));
+  localStorage.setItem(getKey('expenses'), JSON.stringify(expenses));
+  localStorage.setItem(getKey('people'),   JSON.stringify(people));
 }
 
 function getPersonColor(name) {
@@ -87,11 +103,11 @@ function applyTheme(dark) {
   document.body.classList.toggle('dark-theme', dark);
   themeIcon.className = dark ? 'fas fa-sun' : 'fas fa-moon';
   themeToggle.title   = dark ? 'Switch to Light Theme' : 'Switch to Dark Theme';
-  localStorage.setItem('ss_theme', dark ? 'dark' : 'light');
+  if (currentUser) localStorage.setItem(getKey('theme'), dark ? 'dark' : 'light');
 }
 
-// Load saved theme
-applyTheme(localStorage.getItem('ss_theme') === 'dark');
+// Theme will be properly applied after login
+applyTheme(false);
 
 themeToggle.addEventListener('click', () => {
   applyTheme(!document.body.classList.contains('dark-theme'));
@@ -1044,8 +1060,94 @@ document.getElementById('shareReportBtn').addEventListener('click', async () => 
   }
 });
 
+// ── Auth UI ───────────────────────────────────────────────────────────────────
+function setAuthError(id, msg) { document.getElementById(id).textContent = msg; }
+
+document.getElementById('loginEye').addEventListener('click', () => {
+  const inp = document.getElementById('loginPassword');
+  const icon = document.querySelector('#loginEye i');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  icon.className = inp.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+});
+document.getElementById('regEye').addEventListener('click', () => {
+  const inp = document.getElementById('regPassword');
+  const icon = document.querySelector('#regEye i');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  icon.className = inp.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+});
+
+document.getElementById('goToRegister').addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('registerForm').style.display = 'block';
+  setAuthError('loginError', '');
+});
+document.getElementById('goToLogin').addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById('registerForm').style.display = 'none';
+  document.getElementById('loginForm').style.display = 'block';
+  setAuthError('regError', '');
+});
+
+document.getElementById('loginPassword').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('loginBtn').click();
+});
+document.getElementById('regConfirm').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('registerBtn').click();
+});
+
+document.getElementById('loginBtn').addEventListener('click', () => {
+  const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+  const password = document.getElementById('loginPassword').value;
+  setAuthError('loginError', '');
+  if (!username || !password) { setAuthError('loginError', 'Please enter username and password.'); return; }
+  const users = getUsers();
+  if (!users[username]) { setAuthError('loginError', 'No account found. Please register first.'); return; }
+  if (users[username] !== hashStr(password)) { setAuthError('loginError', 'Incorrect password.'); return; }
+  startSession(username);
+});
+
+document.getElementById('registerBtn').addEventListener('click', () => {
+  const username = document.getElementById('regUsername').value.trim().toLowerCase();
+  const password = document.getElementById('regPassword').value;
+  const confirm  = document.getElementById('regConfirm').value;
+  setAuthError('regError', '');
+  if (!username || username.length < 3) { setAuthError('regError', 'Username must be at least 3 characters.'); return; }
+  if (!/^[a-z0-9_]+$/.test(username)) { setAuthError('regError', 'Only letters, numbers, underscores allowed.'); return; }
+  if (password.length < 4) { setAuthError('regError', 'Password must be at least 4 characters.'); return; }
+  if (password !== confirm) { setAuthError('regError', 'Passwords do not match.'); return; }
+  const users = getUsers();
+  if (users[username]) { setAuthError('regError', 'Username already taken.'); return; }
+  users[username] = hashStr(password);
+  saveUsers(users);
+  startSession(username);
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  if (!confirm('Are you sure you want to log out?')) return;
+  localStorage.removeItem('ss_session');
+  location.reload();
+});
+
+function startSession(username) {
+  currentUser = username;
+  localStorage.setItem('ss_session', username);
+  loadUserData();
+  seedDemoData();
+  const avatarEl = document.getElementById('topbarAvatar');
+  avatarEl.textContent = getInitials(username);
+  avatarEl.title = username;
+  applyTheme(localStorage.getItem(getKey('theme')) === 'dark');
+  document.getElementById('authScreen').style.display = 'none';
+  refreshPersonSelects();
+  renderAddExpense();
+  renderDashboard();
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
-seedDemoData();
-refreshPersonSelects();
-renderAddExpense();
-renderDashboard();
+if (currentUser) {
+  startSession(currentUser);
+} else {
+  document.getElementById('authScreen').style.display = 'flex';
+}
+
