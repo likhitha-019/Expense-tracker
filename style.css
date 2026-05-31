@@ -142,7 +142,7 @@ body {
 
 /* ── Topbar ── */
 .topbar {
-  background: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.98);
   border-bottom: 1px solid var(--border);
   padding: .9rem 2rem;
   display: flex;
@@ -151,7 +151,6 @@ body {
   position: sticky;
   top: 0;
   z-index: 50;
-  backdrop-filter: blur(12px);
   box-shadow: 0 1px 8px rgba(99,102,241,0.07);
 }
 .hamburger {
@@ -1057,7 +1056,7 @@ body.dark-theme {
   background: linear-gradient(135deg, #0f1117 0%, #161b27 50%, #0f1117 100%);
 }
 body.dark-theme .sidebar { background: #161b27; box-shadow: 2px 0 16px rgba(0,0,0,0.3); }
-body.dark-theme .topbar  { background: rgba(22,27,39,0.9); box-shadow: 0 1px 8px rgba(0,0,0,0.3); }
+body.dark-theme .topbar  { background: rgba(22,27,39,0.98); box-shadow: 0 1px 8px rgba(0,0,0,0.3); }
 body.dark-theme .date-badge { background: #1e2535; color: #a78bfa; }
 body.dark-theme .chart-card,
 body.dark-theme .recent-card,
@@ -1158,5 +1157,4 @@ body.dark-theme .btn-export { background: #252d3d; }
   inset: 0;
   background: rgba(0,0,0,0.45);
   z-index: 99;
-  backdrop-filter: blur(2px);
 }
